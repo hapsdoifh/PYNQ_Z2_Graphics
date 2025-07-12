@@ -82,7 +82,9 @@
 
 	// Add user logic here
     assign BM_en = 1'b1;
-    assign BM_en = 1'b0;
+    assign BM_data[31:8] = 24'hffffff;
+    assign BM_rst = ~s00_axi_aresetn;
+//    assign BM_wen = 4'b1111;
 	// User logic ends
 
 	endmodule
