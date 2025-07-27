@@ -1,7 +1,7 @@
 
 `timescale 1 ns / 1 ps
 
-	module axi_line_drawer_slave_lite_v1_0_S00_AXI #
+	module harry_graphics_ip_core_slave_lite_v1_0_S00_AXI #
 	(
 		// Users to add parameters here
 
@@ -15,9 +15,19 @@
 	)
 	(
 		// Users to add ports here
-        output wire [3:0] BM_wen,
-        output wire [31:0] BM_addr,
-        output wire [7:0] BM_data,
+		input wire input_read_ack,
+		input wire input_wvalid,
+		
+		output wire [31:0] output_reg0,
+		output wire [31:0] output_reg1,
+		output wire [31:0] output_reg2,
+		output wire [31:0] output_reg3,
+		output wire [31:0] output_reg4,
+		
+		output wire output_wvalid,
+		output wire output_read_ack,
+		
+		input wire [31:0] input_data0,		
 		// User ports ends
 		// Do not modify the ports beyond this line
 
@@ -104,13 +114,15 @@
 	//----------------------------------------------
 	//-- Signals for user logic register space example
 	//------------------------------------------------
-	//-- Number of Slave Registers 6
+	//-- Number of Slave Registers 8
 	reg [C_S_AXI_DATA_WIDTH-1:0]	slv_reg0;
 	reg [C_S_AXI_DATA_WIDTH-1:0]	slv_reg1;
 	reg [C_S_AXI_DATA_WIDTH-1:0]	slv_reg2;
 	reg [C_S_AXI_DATA_WIDTH-1:0]	slv_reg3;
 	reg [C_S_AXI_DATA_WIDTH-1:0]	slv_reg4;
 	reg [C_S_AXI_DATA_WIDTH-1:0]	slv_reg5;
+	reg [C_S_AXI_DATA_WIDTH-1:0]	slv_reg6;
+	reg [C_S_AXI_DATA_WIDTH-1:0]	slv_reg7;
 	integer	 byte_index;
 
 	// I/O Connections assignments
@@ -118,16 +130,13 @@
 	assign S_AXI_AWREADY	= axi_awready;
 	assign S_AXI_WREADY	= axi_wready;
 	assign S_AXI_BRESP	= axi_bresp;
-//	assign S_AXI_BRESP	= 2'b00;
 	assign S_AXI_BVALID	= axi_bvalid;
-//	assign S_AXI_BVALID	= 1'b1;
 	assign S_AXI_ARREADY	= axi_arready;
 	assign S_AXI_RRESP	= axi_rresp;
 	assign S_AXI_RVALID	= axi_rvalid;
 	 //state machine varibles 
 	 reg [1:0] state_write;
 	 reg [1:0] state_read;
-	 reg [7:0] timeout;
 	 //State machine local parameters
 	 localparam Idle = 2'b00,Raddr = 2'b10,Rdata = 2'b11 ,Waddr = 2'b10,Wdata = 2'b11;
 	// Implement Write state machine
@@ -141,15 +150,13 @@
 	         axi_bvalid <= 0;                                 
 	         axi_bresp <= 0;                                 
 	         axi_awaddr <= 0;                                 
-	         state_write <= Idle;    
-	         timeout <= 0;                             
+	         state_write <= Idle;                                 
 	       end                                 
 	     else                                  
 	       begin                                 
 	         case(state_write)                                 
 	           Idle:                                      
-	             begin     
-	               timeout <= 0;                            
+	             begin                                 
 	               if(S_AXI_ARESETN == 1'b1)                                  
 	                 begin                                 
 	                   axi_awready <= 1'b1;                                 
@@ -167,19 +174,19 @@
 	                      begin                                   
 	                        axi_awready <= 1'b1;                                 
 	                        state_write <= Waddr;                                 
-	                        axi_bvalid <= 1'b1;                              
+	                        axi_bvalid <= 1'b1;                                 
 	                      end                                 
 	                    else                                  
 	                      begin                                 
-	                        axi_awready <= 1'b0;                              
+	                        axi_awready <= 1'b0;                                 
 	                        state_write <= Wdata;                                 
-	                        if (S_AXI_BREADY && axi_bvalid) axi_bvalid <= 1'b0;           
+	                        if (S_AXI_BREADY && axi_bvalid) axi_bvalid <= 1'b0;                                 
 	                      end                                 
 	                  end                                 
 	               else                                  
 	                  begin                                 
 	                    state_write <= state_write;                                 
-	                    if (S_AXI_BREADY && axi_bvalid) axi_bvalid <= 1'b0;                        
+	                    if (S_AXI_BREADY && axi_bvalid) axi_bvalid <= 1'b0;                                 
 	                   end                                 
 	             end                                 
 	          Wdata:        //At this state, slave is ready to receive the data packets until the number of transfers is equal to burst length                                 
@@ -193,7 +200,7 @@
 	                else                                  
 	                 begin                                 
 	                   state_write <= state_write;                                 
-	                   if (S_AXI_BREADY && axi_bvalid) axi_bvalid <= 1'b0;                                                            
+	                   if (S_AXI_BREADY && axi_bvalid) axi_bvalid <= 1'b0;                                 
 	                 end                                              
 	             end                                 
 	          endcase                                 
@@ -217,8 +224,10 @@
 	      slv_reg1 <= 0;
 	      slv_reg2 <= 0;
 	      slv_reg3 <= 0;
-//	      slv_reg4 <= 0;
-//	      slv_reg5 <= 0;
+	      slv_reg4 <= 0;
+	      slv_reg5 <= 0;
+	      slv_reg6 <= 0;
+//	      slv_reg7 <= 0;
 	    end 
 	  else begin
 	    if (S_AXI_WVALID)
@@ -257,22 +266,38 @@
 	              if ( S_AXI_WSTRB[byte_index] == 1 ) begin
 	                // Respective byte enables are asserted as per write strobes 
 	                // Slave register 4
-//	                slv_reg4[(byte_index*8) +: 8] <= S_AXI_WDATA[(byte_index*8) +: 8];
+	                slv_reg4[(byte_index*8) +: 8] <= S_AXI_WDATA[(byte_index*8) +: 8];
 	              end  
 	          3'h5:
 	            for ( byte_index = 0; byte_index <= (C_S_AXI_DATA_WIDTH/8)-1; byte_index = byte_index+1 )
 	              if ( S_AXI_WSTRB[byte_index] == 1 ) begin
 	                // Respective byte enables are asserted as per write strobes 
 	                // Slave register 5
-//	                slv_reg5[(byte_index*8) +: 8] <= S_AXI_WDATA[(byte_index*8) +: 8];
+	                slv_reg5[(byte_index*8) +: 8] <= S_AXI_WDATA[(byte_index*8) +: 8];
+	              end  
+	          3'h6:
+	            for ( byte_index = 0; byte_index <= (C_S_AXI_DATA_WIDTH/8)-1; byte_index = byte_index+1 )
+	              if ( S_AXI_WSTRB[byte_index] == 1 ) begin
+	                // Respective byte enables are asserted as per write strobes 
+	                // Slave register 6
+	                slv_reg6[(byte_index*8) +: 8] <= S_AXI_WDATA[(byte_index*8) +: 8];
+	              end  
+	          3'h7:
+	            for ( byte_index = 0; byte_index <= (C_S_AXI_DATA_WIDTH/8)-1; byte_index = byte_index+1 )
+	              if ( S_AXI_WSTRB[byte_index] == 1 ) begin
+	                // Respective byte enables are asserted as per write strobes 
+	                // Slave register 7
+//	                slv_reg7[(byte_index*8) +: 8] <= S_AXI_WDATA[(byte_index*8) +: 8];
 	              end  
 	          default : begin
 	                      slv_reg0 <= slv_reg0;
 	                      slv_reg1 <= slv_reg1;
 	                      slv_reg2 <= slv_reg2;
 	                      slv_reg3 <= slv_reg3;
-//	                      slv_reg4 <= slv_reg4;
-//	                      slv_reg5 <= slv_reg5;
+	                      slv_reg4 <= slv_reg4;
+	                      slv_reg5 <= slv_reg5;
+	                      slv_reg6 <= slv_reg6;
+//	                      slv_reg7 <= slv_reg7;
 	                    end
 	        endcase
 	      end
@@ -327,37 +352,59 @@
 	          end                                       
 	        end                                         
 	// Implement memory mapped register select and read logic generation
-	  assign S_AXI_RDATA = (axi_araddr[ADDR_LSB+OPT_MEM_ADDR_BITS:ADDR_LSB] == 3'h0) ? slv_reg0 : (axi_araddr[ADDR_LSB+OPT_MEM_ADDR_BITS:ADDR_LSB] == 3'h1) ? slv_reg1 : (axi_araddr[ADDR_LSB+OPT_MEM_ADDR_BITS:ADDR_LSB] == 3'h2) ? slv_reg2 : (axi_araddr[ADDR_LSB+OPT_MEM_ADDR_BITS:ADDR_LSB] == 3'h3) ? slv_reg3 : (axi_araddr[ADDR_LSB+OPT_MEM_ADDR_BITS:ADDR_LSB] == 3'h4) ? slv_reg4 : (axi_araddr[ADDR_LSB+OPT_MEM_ADDR_BITS:ADDR_LSB] == 3'h5) ? slv_reg5 : 0; 
+	  assign S_AXI_RDATA = (axi_araddr[ADDR_LSB+OPT_MEM_ADDR_BITS:ADDR_LSB] == 3'h0) ? slv_reg0 : (axi_araddr[ADDR_LSB+OPT_MEM_ADDR_BITS:ADDR_LSB] == 3'h1) ? slv_reg1 : (axi_araddr[ADDR_LSB+OPT_MEM_ADDR_BITS:ADDR_LSB] == 3'h2) ? slv_reg2 : (axi_araddr[ADDR_LSB+OPT_MEM_ADDR_BITS:ADDR_LSB] == 3'h3) ? slv_reg3 : (axi_araddr[ADDR_LSB+OPT_MEM_ADDR_BITS:ADDR_LSB] == 3'h4) ? slv_reg4 : (axi_araddr[ADDR_LSB+OPT_MEM_ADDR_BITS:ADDR_LSB] == 3'h5) ? slv_reg5 : (axi_araddr[ADDR_LSB+OPT_MEM_ADDR_BITS:ADDR_LSB] == 3'h6) ? slv_reg6 : (axi_araddr[ADDR_LSB+OPT_MEM_ADDR_BITS:ADDR_LSB] == 3'h7) ? slv_reg7 : 0; 
+	
 	// Add user logic here
-	wire bm_wen;
-	wire [15:0] pre_fb_addr;
-	wire [31:0] post_fb_addr;
-	assign post_fb_addr = (pre_fb_addr[7:0] * 8'd80 + pre_fb_addr[15:8]);
-	assign BM_addr = {post_fb_addr[31:2], 2'b0};
-	reg [3:0] wen_history;
-	wire [31:0] debug_data;
+	reg in_read_ack_stage1, in_read_ack_stage2;
+	wire in_read_ack;
+	reg out_read_ack;
+	reg out_wvalid;
+	assign in_read_ack = in_read_ack_stage2;
+	
+	reg [31:0] reg0_write, reg1_write, reg2_write, reg3_write, reg4_write;
+	
+    assign output_reg0 = reg0_write;
+    assign output_reg1 = reg1_write;
+    assign output_reg2 = reg2_write;
+    assign output_reg3 = reg3_write;
+    assign output_reg4 = reg4_write;
+    
+    assign output_wvalid = out_wvalid;
+    assign output_read_ack = out_read_ack;
+    
+    reg valid_stage1, valid_stage2;
+    
+	//TODO FINISH THE SYNCING FUNCTIONLAITY
 	always @(posedge S_AXI_ACLK)
 	begin
-	   wen_history <= wen_history | BM_wen;	   
-	   slv_reg4 <= debug_data;
-	   slv_reg5 <= {pre_fb_addr[15:0], post_fb_addr[15:0]};
+	   in_read_ack_stage1 <= input_read_ack;
+	   in_read_ack_stage2 <= in_read_ack_stage1;
+	   
+	   valid_stage1 <= input_wvalid;
+	   valid_stage2 <= valid_stage1;
 	end
     
-    Wireframe_drawer drawer_1(
-        .clk(S_AXI_ACLK),
-        .x0(slv_reg0[7:0]),
-        .y0(slv_reg1[7:0]),
-        .x1(slv_reg2[7:0]),
-        .y1(slv_reg3[7:0]),
-        .start(slv_reg3[8]),
-        .fb_addr(pre_fb_addr),
-        .fb_data(BM_data),
-        .w_en(bm_wen),
-        .debug_info(debug_data)        
-    );
-    
-	assign BM_wen = (bm_wen == 0) ? 4'b0000 : (post_fb_addr[1:0] == 2'b00) ? 4'b0001 : (post_fb_addr[1:0] == 2'b01) ? 4'b0010 : (post_fb_addr[1:0] == 2'b10) ? 4'b0100 : 4'b1000;
-//    assign BM_wen = 4'b1111;
+	always @(posedge S_AXI_ACLK)
+	begin
+	   if(valid_stage2) begin
+           out_read_ack <= 1;
+           slv_reg7 <= input_data0;
+	   end else begin
+	       out_read_ack <= 0;  
+	   end
+	
+	   if(!out_wvalid && slv_reg3[8]) begin
+	       out_wvalid <= 1;
+	       reg0_write <= slv_reg0;
+	       reg1_write <= slv_reg1;
+	       reg2_write <= slv_reg2;
+	       reg3_write <= slv_reg3;
+	       reg4_write <= slv_reg4;
+	   end
+	   else if(in_read_ack) begin
+	       out_wvalid <= 0;
+	   end
+	end
 	// User logic ends
 
 	endmodule

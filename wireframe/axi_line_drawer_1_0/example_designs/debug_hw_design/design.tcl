@@ -27,8 +27,8 @@ proc create_ipi_design { offsetfile design_name } {
 	connect_bd_net [get_bd_pins sys_reset_0/slowest_sync_clk] [get_bd_pins sys_clk_0/clk_out1]
 	connect_bd_net [get_bd_pins sys_clk_0/locked] [get_bd_pins sys_reset_0/dcm_locked]
 
-	# Create instance: axi_line_drawer_0, and set properties
-	set axi_line_drawer_0 [ create_bd_cell -type ip -vlnv xilinx.com:user:axi_line_drawer:1.0 axi_line_drawer_0 ]
+	# Create instance: harry_graphics_ip_core_0, and set properties
+	set harry_graphics_ip_core_0 [ create_bd_cell -type ip -vlnv xilinx.com:user:harry_graphics_ip_core:1.0 harry_graphics_ip_core_0 ]
 
 	# Create instance: jtag_axi_0, and set properties
 	set jtag_axi_0 [ create_bd_cell -type ip -vlnv xilinx.com:ip:jtag_axi jtag_axi_0 ]
@@ -45,35 +45,106 @@ proc create_ipi_design { offsetfile design_name } {
 	connect_bd_net [get_bd_pins axi_peri_interconnect/S00_ARESETN] [get_bd_pins sys_reset_0/peripheral_aresetn]
 	connect_bd_intf_net [get_bd_intf_pins jtag_axi_0/M_AXI] [get_bd_intf_pins axi_peri_interconnect/S00_AXI]
 
-	set_property -dict [ list CONFIG.NUM_MI {1} ] $axi_peri_interconnect
+	set_property -dict [ list CONFIG.NUM_MI {4} ] $axi_peri_interconnect
 	connect_bd_net [get_bd_pins axi_peri_interconnect/M00_ACLK] [get_bd_pins sys_clk_0/clk_out1]
 	connect_bd_net [get_bd_pins axi_peri_interconnect/M00_ARESETN] [get_bd_pins sys_reset_0/peripheral_aresetn]
+	connect_bd_net [get_bd_pins axi_peri_interconnect/M01_ACLK] [get_bd_pins sys_clk_0/clk_out1]
+	connect_bd_net [get_bd_pins axi_peri_interconnect/M01_ARESETN] [get_bd_pins sys_reset_0/peripheral_aresetn]
+	connect_bd_net [get_bd_pins axi_peri_interconnect/M02_ACLK] [get_bd_pins sys_clk_0/clk_out1]
+	connect_bd_net [get_bd_pins axi_peri_interconnect/M02_ARESETN] [get_bd_pins sys_reset_0/peripheral_aresetn]
+	connect_bd_net [get_bd_pins axi_peri_interconnect/M03_ACLK] [get_bd_pins sys_clk_0/clk_out1]
+	connect_bd_net [get_bd_pins axi_peri_interconnect/M03_ARESETN] [get_bd_pins sys_reset_0/peripheral_aresetn]
 
-	# Connect all clock & reset of axi_line_drawer_0 slave interfaces..
-	connect_bd_intf_net [get_bd_intf_pins axi_peri_interconnect/M00_AXI] [get_bd_intf_pins axi_line_drawer_0/S00_AXI]
-	connect_bd_net [get_bd_pins axi_line_drawer_0/s00_axi_aclk] [get_bd_pins sys_clk_0/clk_out1]
-	connect_bd_net [get_bd_pins axi_line_drawer_0/s00_axi_aresetn] [get_bd_pins sys_reset_0/peripheral_aresetn]
+	# Create instance: axi_mem_interconnect, and set properties
+	set axi_mem_interconnect [ create_bd_cell -type ip -vlnv xilinx.com:ip:axi_interconnect axi_mem_interconnect ]
+	connect_bd_net [get_bd_pins axi_mem_interconnect/ACLK] [get_bd_pins sys_clk_0/clk_out1]
+	connect_bd_net [get_bd_pins axi_mem_interconnect/ARESETN] [get_bd_pins sys_reset_0/interconnect_aresetn]
+	set_property -dict [ list CONFIG.NUM_MI {1} ] $axi_mem_interconnect
+	connect_bd_net [get_bd_pins axi_mem_interconnect/M00_ACLK] [get_bd_pins sys_clk_0/clk_out1]
+	connect_bd_net [get_bd_pins axi_mem_interconnect/M00_ARESETN] [get_bd_pins sys_reset_0/peripheral_aresetn]
+
+	set_property -dict [ list CONFIG.NUM_SI {2} ] $axi_mem_interconnect
+	connect_bd_net [get_bd_pins axi_mem_interconnect/S00_ACLK] [get_bd_pins sys_clk_0/clk_out1]
+	connect_bd_net [get_bd_pins axi_mem_interconnect/S00_ARESETN] [get_bd_pins sys_reset_0/peripheral_aresetn]
+	connect_bd_net [get_bd_pins axi_mem_interconnect/S01_ACLK] [get_bd_pins sys_clk_0/clk_out1]
+	connect_bd_net [get_bd_pins axi_mem_interconnect/S01_ARESETN] [get_bd_pins sys_reset_0/peripheral_aresetn]
+	connect_bd_intf_net [get_bd_intf_pins axi_mem_interconnect/S01_AXI] [get_bd_intf_pins axi_peri_interconnect/M01_AXI]
+
+	# Create instance: axi_bram_ctrl_0, and set properties
+	set axi_bram_ctrl_0 [ create_bd_cell -type ip -vlnv xilinx.com:ip:axi_bram_ctrl axi_bram_ctrl_0 ]
+	connect_bd_intf_net [get_bd_intf_pins axi_mem_interconnect/M00_AXI] [get_bd_intf_pins axi_bram_ctrl_0/S_AXI]
+	connect_bd_net [get_bd_pins axi_bram_ctrl_0/s_axi_aclk] [get_bd_pins sys_clk_0/clk_out1]
+	connect_bd_net [get_bd_pins axi_bram_ctrl_0/s_axi_aresetn] [get_bd_pins sys_reset_0/peripheral_aresetn]
+
+	# Create instance: axi_bram_0, and set properties
+	set axi_bram_0 [ create_bd_cell -type ip -vlnv xilinx.com:ip:blk_mem_gen axi_bram_0 ]
+	set_property -dict [ list CONFIG.Memory_Type {True_Dual_Port_RAM}  ] $axi_bram_0
+	connect_bd_intf_net [get_bd_intf_pins axi_bram_ctrl_0/BRAM_PORTA] [get_bd_intf_pins axi_bram_0/BRAM_PORTA]
+	connect_bd_intf_net [get_bd_intf_pins axi_bram_ctrl_0/BRAM_PORTB] [get_bd_intf_pins axi_bram_0/BRAM_PORTB]
+
+	# Create instance: axi_gpio_out, and set properties
+	set axi_gpio_out [ create_bd_cell -type ip -vlnv xilinx.com:ip:axi_gpio axi_gpio_out ]
+	set_property -dict [ list CONFIG.C_ALL_OUTPUTS {1} CONFIG.C_GPIO_WIDTH {1}  ] $axi_gpio_out
+	connect_bd_net [get_bd_pins axi_gpio_out/s_axi_aclk] [get_bd_pins sys_clk_0/clk_out1]
+	connect_bd_net [get_bd_pins axi_gpio_out/s_axi_aresetn] [get_bd_pins sys_reset_0/peripheral_aresetn]
+	connect_bd_intf_net [get_bd_intf_pins axi_gpio_out/S_AXI] [get_bd_intf_pins axi_peri_interconnect/M02_AXI]
+
+	# Create instance: axi_gpio_in, and set properties
+	set axi_gpio_in [ create_bd_cell -type ip -vlnv xilinx.com:ip:axi_gpio axi_gpio_in ]
+	set_property -dict [ list CONFIG.C_ALL_INPUTS {1} CONFIG.C_GPIO_WIDTH {2}  ] $axi_gpio_in
+	connect_bd_net [get_bd_pins axi_gpio_in/s_axi_aclk] [get_bd_pins sys_clk_0/clk_out1]
+	connect_bd_net [get_bd_pins axi_gpio_in/s_axi_aresetn] [get_bd_pins sys_reset_0/peripheral_aresetn]
+	connect_bd_intf_net [get_bd_intf_pins axi_gpio_in/S_AXI] [get_bd_intf_pins axi_peri_interconnect/M03_AXI]
+
+	# Create instance: xlconcat_0, and set properties
+	set xlconcat_0 [ create_bd_cell -type ip -vlnv xilinx.com:ip:xlconcat xlconcat_0 ]
+	set_property -dict [ list CONFIG.NUM_PORTS {2}  ] $xlconcat_0
+	connect_bd_net [get_bd_pins xlconcat_0/dout] [get_bd_pins axi_gpio_in/gpio_io_i]
+
+	# Connect all clock & reset of harry_graphics_ip_core_0 slave interfaces..
+	connect_bd_intf_net [get_bd_intf_pins axi_peri_interconnect/M00_AXI] [get_bd_intf_pins harry_graphics_ip_core_0/S00_AXI]
+	connect_bd_net [get_bd_pins harry_graphics_ip_core_0/s00_axi_aclk] [get_bd_pins sys_clk_0/clk_out1]
+	connect_bd_net [get_bd_pins harry_graphics_ip_core_0/s00_axi_aresetn] [get_bd_pins sys_reset_0/peripheral_aresetn]
+
+	# Connect all clock, reset & status pins of harry_graphics_ip_core_0 master interfaces..
+	connect_bd_intf_net [get_bd_intf_pins axi_mem_interconnect/S00_AXI] [get_bd_intf_pins harry_graphics_ip_core_0/M00_AXI]
+	connect_bd_net [get_bd_pins harry_graphics_ip_core_0/m00_axi_aclk] [get_bd_pins sys_clk_0/clk_out1]
+	connect_bd_net [get_bd_pins harry_graphics_ip_core_0/m00_axi_aresetn] [get_bd_pins sys_reset_0/peripheral_aresetn]
+	connect_bd_net [get_bd_pins harry_graphics_ip_core_0/m00_axi_txn_done] [get_bd_pins xlconcat_0/In0]
+	connect_bd_net [get_bd_pins harry_graphics_ip_core_0/m00_axi_error] [get_bd_pins xlconcat_0/In1]
+	connect_bd_net [get_bd_pins harry_graphics_ip_core_0/m00_axi_init_axi_txn] [ get_bd_pins axi_gpio_out/gpio_io_o ]
 
 
 	# Auto assign address
 	assign_bd_address
 
-	# Copy all address to axi_line_drawer_include.tcl file
+	# Configure address param & range of harry_graphics_ip_core_0 master interfaces..
+	set_property range 16K [get_bd_addr_segs {jtag_axi_0/Data/SEG_axi_bram_ctrl_0_Mem0}]
+	set_property range 16K [get_bd_addr_segs {harry_graphics_ip_core_0/M00_AXI/SEG_axi_bram_ctrl_0_Mem0}]
+	set_property -dict [list  CONFIG.C_M00_AXI_TARGET_SLAVE_BASE_ADDR {0xC0000000} ] [get_bd_cells harry_graphics_ip_core_0]
+
+	# Copy all address to harry_graphics_ip_core_include.tcl file
 	set bd_path [get_property DIRECTORY [current_project]]/[current_project].srcs/[current_fileset]/bd
 	upvar 1 $offsetfile offset_file
-	set offset_file "${bd_path}/axi_line_drawer_include.tcl"
+	set offset_file "${bd_path}/harry_graphics_ip_core_include.tcl"
 	set fp [open $offset_file "w"]
 	puts $fp "# Configuration address parameters"
 
-	set offset [get_property OFFSET [get_bd_addr_segs /jtag_axi_0/Data/SEG_axi_line_drawer_0_S00_AXI_* ]]
+	set offset [get_property OFFSET [get_bd_addr_segs /jtag_axi_0/Data/SEG_axi_gpio_in_Reg ]]
+	puts $fp "set axi_gpio_in_addr ${offset}"
+
+	set offset [get_property OFFSET [get_bd_addr_segs /jtag_axi_0/Data/SEG_axi_gpio_out_Reg ]]
+	puts $fp "set axi_gpio_out_addr ${offset}"
+
+	set offset [get_property OFFSET [get_bd_addr_segs /jtag_axi_0/Data/SEG_harry_graphics_ip_core_0_S00_AXI_* ]]
 	puts $fp "set s00_axi_addr ${offset}"
 
 	close $fp
 }
 
 # Set IP Repository and Update IP Catalogue 
-set ip_path [file dirname [file normalize [get_property XML_FILE_NAME [ipx::get_cores xilinx.com:user:axi_line_drawer:1.0]]]]
-set hw_test_file ${ip_path}/example_designs/debug_hw_design/axi_line_drawer_hw_test.tcl
+set ip_path [file dirname [file normalize [get_property XML_FILE_NAME [ipx::get_cores xilinx.com:user:harry_graphics_ip_core:1.0]]]]
+set hw_test_file ${ip_path}/example_designs/debug_hw_design/harry_graphics_ip_core_hw_test.tcl
 
 set repo_paths [get_property ip_repo_paths [current_fileset]] 
 if { [lsearch -exact -nocase $repo_paths $ip_path ] == -1 } {
@@ -91,7 +162,7 @@ lappend all_bd $bd_name
 }
 
 for { set i 1 } { 1 } { incr i } {
-	set design_name "axi_line_drawer_hw_${i}"
+	set design_name "harry_graphics_ip_core_hw_${i}"
 	if { [lsearch -exact -nocase $all_bd $design_name ] == -1 } {
 		break
 	}

@@ -44,6 +44,7 @@ module Wireframe_drawer(
     
     
     reg [1:0] state;
+    reg [1:0] draw_state;
     
     localparam  IDLE = 2'b00,
                 INIT = 2'b01,
@@ -64,11 +65,18 @@ module Wireframe_drawer(
     reg [31:0] pixel_color = 8'hff;
     reg start_latch;
     
-    assign fb_addr = {cur_x, cur_y};
+    reg [7:0] aliased_x0;
+    reg [7:0] aliased_y0;
+    reg [7:0] aliased_x1;
+    reg [7:0] aliased_y1;
+    reg signed [7:0] aliased_delta_x;
+    reg signed [7:0] aliased_delta_y;
+    
+    assign fb_addr = (delta_x > delta_y) ? {cur_x, cur_y} : {cur_y, cur_x};
     assign fb_data = 8'hff;
     assign w_en = write_now;
-    assign debug_info[15:8] = delta_x;
-    assign debug_info[7:0] = delta_y;
+    assign debug_info[15:8] = aliased_delta_x;
+    assign debug_info[7:0] = aliased_delta_y;
     assign debug_info[23:16] = current;
        
        
@@ -78,6 +86,13 @@ module Wireframe_drawer(
                 if(start & start_latch) begin //latch is 1 (ready) and start is 1 (start)
                     state <= INIT;
                     start_latch <= 0;
+                
+                    aliased_x0 <= (delta_x > delta_y) ? x0 : y0;
+                    aliased_x1 <= (delta_x > delta_y) ? x1 : y1;
+                    aliased_y0 <= (delta_x > delta_y) ? y0 : x0;
+                    aliased_y1 <= (delta_x > delta_y) ? y1 : x1;
+                    aliased_delta_x <= (delta_x > delta_y) ? delta_x : delta_y;
+                    aliased_delta_y <= (delta_x > delta_y) ? delta_y : delta_x;
                 end
                 else if(start == 0) begin //latch is 0/1 -> start becomes 0 to reset latch to 1
                     state <= IDLE;  
@@ -87,37 +102,47 @@ module Wireframe_drawer(
                     state <= IDLE;
                     start_latch <= 0;
                 end
+                delta_x <= abs($signed(x1) - $signed(x0));
+                delta_y <= abs($signed(y1) - $signed(y0));
             end
             
             INIT: begin
-                cur_x <= x0;
-                cur_y <= y0;
-                dx <= (x0 < x1) ? 1 : -1;
-                dy <= (y0 < y1) ? 1 : -1;
-                delta_x <= abs($signed(x1) - $signed(x0));
-                delta_y <= abs($signed(y1) - $signed(y0));
+//                cur_x <= x0;
+//                cur_y <= y0;
+//                dx <= (x0 < x1) ? 1 : -1;
+//                dy <= (y0 < y1) ? 1 : -1;
+                cur_x <= aliased_x0;
+                cur_y <= aliased_y0;
+                dx <= (aliased_x0 < aliased_x1) ? 1 : -1;
+                dy <= (aliased_y0 < aliased_y1) ? 1 : -1;
                 current <= 0;
                 state <= RUNNING;
+                draw_state <= INIT;
             end
             
             RUNNING: begin
-                if(current >= 0) begin
-                    cur_y <= cur_y + dy;
-                    cur_x <= cur_x;
-                    current <= current - delta_x;
-                end
-                else begin
-                    cur_y <= cur_y;
+                if(draw_state == INIT) begin
+                    if(current >= 0) begin
+                        cur_y <= cur_y + dy;
+                        current <= current - aliased_delta_x + aliased_delta_y;
+                    end
+                    else begin
+                        cur_y <= cur_y;
+                        current <= current + aliased_delta_y;
+                    end
                     cur_x <= cur_x + dx;
-                    current <= current + delta_y;
-                end
-                if(cur_x == x1 || cur_y == y1)  begin
-                    state <= IDLE;
-                    write_now <= 0;
+                    draw_state <= RUNNING;
+                    write_now <= 1;
                 end
                 else begin
-                    state <= RUNNING;
-                    write_now <= 1;
+                    if(cur_x == aliased_x1)  begin
+                        state <= IDLE;
+                    end
+                    else begin
+                        state <= RUNNING;
+                    end
+                    write_now <= 0;
+                    draw_state <= INIT;
                 end
             end
        endcase

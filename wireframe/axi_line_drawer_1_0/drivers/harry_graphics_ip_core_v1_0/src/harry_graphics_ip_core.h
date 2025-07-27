@@ -1,28 +1,30 @@
 
-#ifndef AXI_LINE_DRAWER_H
-#define AXI_LINE_DRAWER_H
+#ifndef HARRY_GRAPHICS_IP_CORE_H
+#define HARRY_GRAPHICS_IP_CORE_H
 
 
 /****************** Include Files ********************/
 #include "xil_types.h"
 #include "xstatus.h"
 
-#define AXI_LINE_DRAWER_S00_AXI_SLV_REG0_OFFSET 0
-#define AXI_LINE_DRAWER_S00_AXI_SLV_REG1_OFFSET 4
-#define AXI_LINE_DRAWER_S00_AXI_SLV_REG2_OFFSET 8
-#define AXI_LINE_DRAWER_S00_AXI_SLV_REG3_OFFSET 12
-#define AXI_LINE_DRAWER_S00_AXI_SLV_REG4_OFFSET 16
-#define AXI_LINE_DRAWER_S00_AXI_SLV_REG5_OFFSET 20
+#define HARRY_GRAPHICS_IP_CORE_S00_AXI_SLV_REG0_OFFSET 0
+#define HARRY_GRAPHICS_IP_CORE_S00_AXI_SLV_REG1_OFFSET 4
+#define HARRY_GRAPHICS_IP_CORE_S00_AXI_SLV_REG2_OFFSET 8
+#define HARRY_GRAPHICS_IP_CORE_S00_AXI_SLV_REG3_OFFSET 12
+#define HARRY_GRAPHICS_IP_CORE_S00_AXI_SLV_REG4_OFFSET 16
+#define HARRY_GRAPHICS_IP_CORE_S00_AXI_SLV_REG5_OFFSET 20
+#define HARRY_GRAPHICS_IP_CORE_S00_AXI_SLV_REG6_OFFSET 24
+#define HARRY_GRAPHICS_IP_CORE_S00_AXI_SLV_REG7_OFFSET 28
 
 
 /**************************** Type Definitions *****************************/
 /**
  *
- * Write a value to a AXI_LINE_DRAWER register. A 32 bit write is performed.
+ * Write a value to a HARRY_GRAPHICS_IP_CORE register. A 32 bit write is performed.
  * If the component is implemented in a smaller width, only the least
  * significant data is written.
  *
- * @param   BaseAddress is the base address of the AXI_LINE_DRAWERdevice.
+ * @param   BaseAddress is the base address of the HARRY_GRAPHICS_IP_COREdevice.
  * @param   RegOffset is the register offset from the base to write to.
  * @param   Data is the data written to the register.
  *
@@ -30,30 +32,30 @@
  *
  * @note
  * C-style signature:
- * 	void AXI_LINE_DRAWER_mWriteReg(u32 BaseAddress, unsigned RegOffset, u32 Data)
+ * 	void HARRY_GRAPHICS_IP_CORE_mWriteReg(u32 BaseAddress, unsigned RegOffset, u32 Data)
  *
  */
-#define AXI_LINE_DRAWER_mWriteReg(BaseAddress, RegOffset, Data) \
+#define HARRY_GRAPHICS_IP_CORE_mWriteReg(BaseAddress, RegOffset, Data) \
   	Xil_Out32((BaseAddress) + (RegOffset), (u32)(Data))
 
 /**
  *
- * Read a value from a AXI_LINE_DRAWER register. A 32 bit read is performed.
+ * Read a value from a HARRY_GRAPHICS_IP_CORE register. A 32 bit read is performed.
  * If the component is implemented in a smaller width, only the least
  * significant data is read from the register. The most significant data
  * will be read as 0.
  *
- * @param   BaseAddress is the base address of the AXI_LINE_DRAWER device.
+ * @param   BaseAddress is the base address of the HARRY_GRAPHICS_IP_CORE device.
  * @param   RegOffset is the register offset from the base to write to.
  *
  * @return  Data is the data from the register.
  *
  * @note
  * C-style signature:
- * 	u32 AXI_LINE_DRAWER_mReadReg(u32 BaseAddress, unsigned RegOffset)
+ * 	u32 HARRY_GRAPHICS_IP_CORE_mReadReg(u32 BaseAddress, unsigned RegOffset)
  *
  */
-#define AXI_LINE_DRAWER_mReadReg(BaseAddress, RegOffset) \
+#define HARRY_GRAPHICS_IP_CORE_mReadReg(BaseAddress, RegOffset) \
     Xil_In32((BaseAddress) + (RegOffset))
 
 /************************** Function Prototypes ****************************/
@@ -65,7 +67,7 @@
  * If the hardware system is not built correctly, this function may never
  * return to the caller.
  *
- * @param   baseaddr_p is the base address of the AXI_LINE_DRAWER instance to be worked on.
+ * @param   baseaddr_p is the base address of the HARRY_GRAPHICS_IP_CORE instance to be worked on.
  *
  * @return
  *
@@ -76,6 +78,6 @@
  * @note    Self test may fail if data memory and device are not on the same bus.
  *
  */
-XStatus AXI_LINE_DRAWER_Reg_SelfTest(void * baseaddr_p);
+XStatus HARRY_GRAPHICS_IP_CORE_Reg_SelfTest(void * baseaddr_p);
 
-#endif // AXI_LINE_DRAWER_H
+#endif // HARRY_GRAPHICS_IP_CORE_H

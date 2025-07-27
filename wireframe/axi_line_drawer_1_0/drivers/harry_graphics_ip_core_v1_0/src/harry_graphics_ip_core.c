@@ -1,6 +1,6 @@
 
 
 /***************************** Include Files *******************************/
-#include "axi_line_drawer.h"
+#include "harry_graphics_ip_core.h"
 
 /************************** Function Definitions ***************************/
