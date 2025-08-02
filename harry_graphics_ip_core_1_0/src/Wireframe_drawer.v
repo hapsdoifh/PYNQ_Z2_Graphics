@@ -22,7 +22,6 @@
 
 module Wireframe_drawer(
     input wire clk,
-//    input wire rst,
     input wire [7:0] x0, //256 bit
     input wire [7:0] y0, //256 bit
     input wire [7:0] x1, //256 bit
@@ -32,7 +31,10 @@ module Wireframe_drawer(
     output wire[15:0] fb_addr,
     output wire[7:0] fb_data,
     output wire w_en,
-    output wire [31:0] debug_info
+    output wire [31:0] debug_info,
+    
+    input wire [1:0] axi_master_state,
+    input wire axi_master_awready
     );
     
     function [7:0] abs;
@@ -42,13 +44,15 @@ module Wireframe_drawer(
         end
     endfunction
     
-    
-    reg [1:0] state;
-    reg [1:0] draw_state;
+    reg [2:1] ticks_to_hold = 0;
     
     localparam  IDLE = 2'b00,
                 INIT = 2'b01,
-                RUNNING = 2'b10;
+                RUNNING = 2'b10,
+                FINISHED = 2'b11;
+                
+    reg [1:0] state = IDLE;
+    reg [1:0] draw_state = IDLE;
                 
     reg signed [7:0] dx;
     reg signed [7:0] dy;
@@ -61,9 +65,9 @@ module Wireframe_drawer(
     
     reg signed [7:0] current;   
     
-    reg write_now;
+    reg write_now = 0;
     reg [31:0] pixel_color = 8'hff;
-    reg start_latch;
+    reg start_latch = 0;
     
     reg [7:0] aliased_x0;
     reg [7:0] aliased_y0;
@@ -78,7 +82,6 @@ module Wireframe_drawer(
     assign debug_info[15:8] = aliased_delta_x;
     assign debug_info[7:0] = aliased_delta_y;
     assign debug_info[23:16] = current;
-       
        
     always @(posedge clk) begin
         case(state)
@@ -117,11 +120,16 @@ module Wireframe_drawer(
                 dy <= (aliased_y0 < aliased_y1) ? 1 : -1;
                 current <= 0;
                 state <= RUNNING;
-                draw_state <= INIT;
+                draw_state <= IDLE;
+                ticks_to_hold <= 0;
             end
             
             RUNNING: begin
-                if(draw_state == INIT) begin
+                if(draw_state == IDLE) begin
+                    if(axi_master_state == IDLE) draw_state <= INIT;
+                    else draw_state <= IDLE;
+                end
+                else if(draw_state == INIT) begin
                     if(current >= 0) begin
                         cur_y <= cur_y + dy;
                         current <= current - aliased_delta_x + aliased_delta_y;
@@ -133,18 +141,32 @@ module Wireframe_drawer(
                     cur_x <= cur_x + dx;
                     draw_state <= RUNNING;
                     write_now <= 1;
+                    ticks_to_hold <= 0;
                 end
-                else begin
-                    if(cur_x == aliased_x1)  begin
-                        state <= IDLE;
+                else if(draw_state == RUNNING) begin
+                    if(ticks_to_hold < 3) begin
+                        draw_state <= RUNNING;
+                        ticks_to_hold <= ticks_to_hold + 1;
                     end
                     else begin
-                        state <= RUNNING;
+                        write_now <= 0;
+                        draw_state <= FINISHED;
                     end
-                    write_now <= 0;
-                    draw_state <= INIT;
+                end 
+                else begin
+                    if(axi_master_awready) begin
+                        if(cur_x == aliased_x1)  begin
+                            state <= IDLE;
+                        end
+                        else begin
+                            state <= RUNNING;
+                        end
+                        draw_state <= IDLE;
+                    end
+                    else draw_state <= FINISHED;
                 end
-            end
+                
+             end
        endcase
     end
     

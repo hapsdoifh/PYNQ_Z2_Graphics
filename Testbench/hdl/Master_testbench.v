@@ -3,9 +3,9 @@
 // Company: 
 // Engineer: 
 // 
-// Create Date: 07/26/2025 08:31:58 PM
+// Create Date: 07/26/2025 10:04:41 PM
 // Design Name: 
-// Module Name: testbench
+// Module Name: Master_testbench
 // Project Name: 
 // Target Devices: 
 // Tool Versions: 
@@ -20,7 +20,7 @@
 //////////////////////////////////////////////////////////////////////////////////
 
 
-module testbench(
+module Master_testbench(
 
     );
 endmodule

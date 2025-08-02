@@ -358,7 +358,7 @@
 	reg in_read_ack_stage1, in_read_ack_stage2;
 	wire in_read_ack;
 	reg out_read_ack;
-	reg out_wvalid;
+	reg out_wvalid = 0;
 	assign in_read_ack = in_read_ack_stage2;
 	
 	reg [31:0] reg0_write, reg1_write, reg2_write, reg3_write, reg4_write;
@@ -392,11 +392,10 @@
 	   end else begin
 	       out_read_ack <= 0;  
 	   end
-	
-	   if(!out_wvalid && slv_reg3[8]) begin
+	   if(slv_reg3[9]) begin
 	       out_wvalid <= 1;
-	       reg0_write <= slv_reg0;
-	       reg1_write <= slv_reg1;
+           reg0_write <= slv_reg0;
+           reg1_write <= slv_reg1;
 	       reg2_write <= slv_reg2;
 	       reg3_write <= slv_reg3;
 	       reg4_write <= slv_reg4;

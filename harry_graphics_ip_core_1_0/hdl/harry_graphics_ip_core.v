@@ -144,7 +144,8 @@
 		
 		.input_data0(m_issued_data0),
 		
-		.output_wvalid(s_issue_wvalid),
+		.output_wvalid(s_issued_wvalid),
+		.input_wvalid(m_issued_wvalid),
         .input_read_ack(read_acknowledge)
 	);
 
@@ -213,6 +214,7 @@
         .input_data1(reg1_data),
         .input_data2(reg2_data),
         .input_data3(reg3_data),
+        .input_data4(reg4_data),
         
         .input_wvalid(s_issued_wvalid),
         .output_wvalid(m_issued_wvalid), 

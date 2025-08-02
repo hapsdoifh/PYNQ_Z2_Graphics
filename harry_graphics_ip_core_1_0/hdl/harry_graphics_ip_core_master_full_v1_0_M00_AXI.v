@@ -224,14 +224,14 @@
 	                       // changes state to RADDR 
 
 	 reg [1:0] mst_exec_state;
-	 reg [1:0] state_write; 
+	 reg [1:0] state_write = 2'b00; 
 	 reg [1:0] state_read; 
 
 	// AXI4 signals
 	//AXI4 internal temp signals
-	reg [C_M_AXI_ADDR_WIDTH-1 : 0] 	axi_awaddr;
+	reg [C_M_AXI_ADDR_WIDTH-1 : 0] 	axi_awaddr = 0;
 	reg  	axi_awvalid;
-	reg [C_M_AXI_DATA_WIDTH-1 : 0] 	axi_wdata;
+	reg [C_M_AXI_DATA_WIDTH-1 : 0] 	axi_wdata = 0;
 	reg  	axi_wlast;
 	reg  	axi_wvalid;
 	reg  	axi_bready;
@@ -316,8 +316,8 @@
 	assign TXN_DONE	= compare_done;
 	//Burst size in bytes
 	assign burst_size_bytes	= C_M_AXI_BURST_LEN * C_M_AXI_DATA_WIDTH/8;
-//	assign init_txn_pulse	= (!init_txn_ff2) && init_txn_ff;
-	assign init_txn_pulse	= valid_stage2;
+	assign init_txn_pulse	= (!init_txn_ff2) && init_txn_ff;
+//	assign init_txn_pulse	= INIT_AXI_TXN;
 
 	//Generate a pulse to initiate AXI transaction.
 	always @(posedge M_AXI_ACLK)										      
@@ -330,7 +330,8 @@
 	      end                                                                               
 	    else                                                                       
 	      begin  
-	        init_txn_ff <= INIT_AXI_TXN;
+//	        init_txn_ff <= INIT_AXI_TXN;
+            init_txn_ff <= TXN_INPUT_FAKE;
 	        init_txn_ff2 <= init_txn_ff;                                                                 
 	      end                                                                      
 	  end     
@@ -390,7 +391,8 @@
 	                begin                         
 	                  axi_awaddr <= axi_awaddr + burst_size_bytes;                         
 	                  axi_wvalid <= 1;                         
-	                  if (M_AXI_WREADY && axi_wlast && &(write_burst_counter[C_NO_BURSTS_REQ-1:0]))                         
+//	                  if (M_AXI_WREADY && axi_wlast && &(write_burst_counter[C_NO_BURSTS_REQ-1:0]))   
+	                  if (M_AXI_WREADY && axi_wlast && write_burst_counter[1])                     
 	                    begin                         
 	                      state_write <= IDLE;                         
 	                      axi_awvalid <= 1'b0;                                
@@ -464,7 +466,8 @@
 	//Forward movement occurs when the write channel is valid and ready
 
 	            begin                        
-	              if (M_AXI_WREADY && axi_wlast && &(write_burst_counter[C_NO_BURSTS_REQ-1:0]))                         
+//	              if (M_AXI_WREADY && axi_wlast && &(write_burst_counter[C_NO_BURSTS_REQ-1:0]))  
+	              if (M_AXI_WREADY && axi_wlast && write_burst_counter[1])                         
 	                begin                        
 	                  state_write <= IDLE;                        
 	                  axi_awvalid <= 1'b0;                               
@@ -848,7 +851,7 @@
 	       reg1_in <= input_data1;
 	       reg2_in <= input_data2;
 	       reg3_in <= input_data3;
-	       reg4_in <= input_data4;
+	       reg4_in <= post_fb_addr;
 	       ack_out <= 1;
 	   end
 	   else begin
@@ -862,9 +865,9 @@
 //	   slv_reg4 <= debug_data;
 //	   slv_reg5 <= {pre_fb_addr[15:0], post_fb_addr[15:0]};
 //	end
-    
+    wire TXN_INPUT_FAKE;
     Wireframe_drawer drawer_1(
-        .clk(S_AXI_ACLK),
+        .clk(M_AXI_ACLK),
         .x0(reg0_in[7:0]),
         .y0(reg1_in[7:0]),
         .x1(reg2_in[7:0]),
@@ -872,8 +875,10 @@
         .start(reg3_in[8]),
         .fb_addr(pre_fb_addr),
         .fb_data(BM_data),
-        .w_en(bm_wen),
-        .debug_info(debug_data)        
+        .w_en(TXN_INPUT_FAKE),
+        .debug_info(debug_data),     
+        .axi_master_state(state_write),
+        .axi_master_awready(M_AXI_AWREADY)
     );
     
 //	assign BM_wen = (bm_wen == 0) ? 4'b0000 : (post_fb_addr[1:0] == 2'b00) ? 4'b0001 : (post_fb_addr[1:0] == 2'b01) ? 4'b0010 : (post_fb_addr[1:0] == 2'b10) ? 4'b0100 : 4'b1000;
