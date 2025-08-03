@@ -192,7 +192,7 @@
 
 	// Burst length for transactions, in C_M_AXI_DATA_WIDTHs.
 	// Non-2^n lengths will eventually cause bursts across 4K address boundaries.
-	 localparam integer C_MASTER_LENGTH	= 12;
+	 localparam integer C_MASTER_LENGTH	= 8;
 	// total number of burst transfers is master length divided by burst length and burst size
 	 localparam integer C_NO_BURSTS_REQ = C_MASTER_LENGTH-clogb2((C_M_AXI_BURST_LEN*C_M_AXI_DATA_WIDTH/8)-1);
 	// Example State machine to initialize counter, initialize write transactions, 
@@ -286,7 +286,7 @@
 	assign M_AXI_AWVALID	= axi_awvalid;
 	//Write Data(W)
 //	assign M_AXI_WDATA	= axi_wdata;
-	assign M_AXI_WDATA	= 32'hffffffff;
+   	assign M_AXI_WDATA	= 32'hffffffff;
 	//All bursts are complete and aligned in this example
 	assign M_AXI_WSTRB	= {(C_M_AXI_DATA_WIDTH/8){1'b1}};
 	assign M_AXI_WLAST	= axi_wlast;
@@ -317,7 +317,6 @@
 	//Burst size in bytes
 	assign burst_size_bytes	= C_M_AXI_BURST_LEN * C_M_AXI_DATA_WIDTH/8;
 	assign init_txn_pulse	= (!init_txn_ff2) && init_txn_ff;
-//	assign init_txn_pulse	= INIT_AXI_TXN;
 
 	//Generate a pulse to initiate AXI transaction.
 	always @(posedge M_AXI_ACLK)										      
@@ -391,8 +390,7 @@
 	                begin                         
 	                  axi_awaddr <= axi_awaddr + burst_size_bytes;                         
 	                  axi_wvalid <= 1;                         
-//	                  if (M_AXI_WREADY && axi_wlast && &(write_burst_counter[C_NO_BURSTS_REQ-1:0]))   
-	                  if (M_AXI_WREADY && axi_wlast && write_burst_counter[1])                     
+	                  if (M_AXI_WREADY && axi_wlast && &(write_burst_counter[C_NO_BURSTS_REQ-1:0]))                         
 	                    begin                         
 	                      state_write <= IDLE;                         
 	                      axi_awvalid <= 1'b0;                                
@@ -466,8 +464,7 @@
 	//Forward movement occurs when the write channel is valid and ready
 
 	            begin                        
-//	              if (M_AXI_WREADY && axi_wlast && &(write_burst_counter[C_NO_BURSTS_REQ-1:0]))  
-	              if (M_AXI_WREADY && axi_wlast && write_burst_counter[1])                         
+	              if (M_AXI_WREADY && axi_wlast && &(write_burst_counter[C_NO_BURSTS_REQ-1:0]))                         
 	                begin                        
 	                  state_write <= IDLE;                        
 	                  axi_awvalid <= 1'b0;                               
