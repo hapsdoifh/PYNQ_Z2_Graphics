@@ -117,10 +117,15 @@ initial begin
 //    addr = 8;
 //    master_agent.AXI4LITE_READ_BURST(base_addr + addr,0,data,resp);
 //    switch_state = data&1'h1;
+    #200ns
+    addr = 16;
+    data = 32'h10000000;
+    master_agent.AXI4LITE_WRITE_BURST(base_addr + addr,0,data,resp);
+    switch_state = data&1'h1;
     
 	#200ns
     addr = 12;
-    data = 20 + (1 << 9);
+    data = 5 + (1 << 9);
     master_agent.AXI4LITE_WRITE_BURST(base_addr + addr,0,data,resp);
     switch_state = data&1'h1;
     
@@ -132,7 +137,7 @@ initial begin
     
     #200ns
     addr = 12;
-    data = 20 + (1 << 8);
+    data = 5 + (1 << 8);
     master_agent.AXI4LITE_WRITE_BURST(base_addr + addr,0,data,resp);
     switch_state = data&1'h1;
     

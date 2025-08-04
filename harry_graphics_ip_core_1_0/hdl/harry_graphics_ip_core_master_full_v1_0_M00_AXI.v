@@ -9,7 +9,7 @@
 		// Do not modify the parameters beyond this line
 
 		// Base address of targeted slave
-		parameter  C_M_TARGET_SLAVE_BASE_ADDR	= 32'h10000000,
+		parameter  C_M_TARGET_SLAVE_BASE_ADDR	= 32'h00000000,
 		// Burst Length. Supports 1, 2, 4, 8, 16, 32, 64, 128, 256 burst lengths
 		parameter integer C_M_AXI_BURST_LEN	= 16,
 		// Thread ID Width
@@ -192,7 +192,7 @@
 
 	// Burst length for transactions, in C_M_AXI_DATA_WIDTHs.
 	// Non-2^n lengths will eventually cause bursts across 4K address boundaries.
-	 localparam integer C_MASTER_LENGTH	= 8;
+	 localparam integer C_MASTER_LENGTH	= 7;
 	// total number of burst transfers is master length divided by burst length and burst size
 	 localparam integer C_NO_BURSTS_REQ = C_MASTER_LENGTH-clogb2((C_M_AXI_BURST_LEN*C_M_AXI_DATA_WIDTH/8)-1);
 	// Example State machine to initialize counter, initialize write transactions, 
@@ -247,7 +247,7 @@
 	//The burst counters are used to track the number of burst transfers of C_M_AXI_BURST_LEN burst length needed to transfer 2^C_MASTER_LENGTH bytes of data.
 	reg [C_NO_BURSTS_REQ : 0] 	write_burst_counter;
 	reg [C_NO_BURSTS_REQ : 0] 	read_burst_counter;
-	reg  	writes_done;
+	reg  	writes_done = 1;
 	reg  	reads_done;
 	reg  	error_reg;
 	reg  	compare_done;
@@ -663,7 +663,8 @@
 	      end                                                                                                   
 	    else if (M_AXI_WREADY && axi_wvalid && axi_wlast)                                                                  
 	      begin                                                                                                 
-	        if (write_burst_counter[C_NO_BURSTS_REQ] == 1'b0)                                                   
+	        if (write_burst_counter[C_NO_BURSTS_REQ] == 1'b0)                                                    
+//	        if (&(write_burst_counter[C_NO_BURSTS_REQ-1:0]))                                                  
 	          begin                                                                                             
 	            write_burst_counter <= write_burst_counter + 1'b1;                                              
 	          end                                                                                               
@@ -709,7 +710,7 @@
 	                                                                                                            
 	        // state transition                                                                                 
 	        case (mst_exec_state)                                                                               
-	                                                                                                            
+	                                                                                                             
 	          IDLE:                                                                                     
 	            // This state is responsible to wait for user defined C_M_START_COUNT                           
 	            // number of clock cycles.                                                                      
@@ -875,7 +876,8 @@
         .w_en(TXN_INPUT_FAKE),
         .debug_info(debug_data),     
         .axi_master_state(state_write),
-        .axi_master_awready(M_AXI_AWREADY)
+        .axi_master_writes_done(writes_done),
+        .axi_master_reads_done(reads_done)
     );
     
 //	assign BM_wen = (bm_wen == 0) ? 4'b0000 : (post_fb_addr[1:0] == 2'b00) ? 4'b0001 : (post_fb_addr[1:0] == 2'b01) ? 4'b0010 : (post_fb_addr[1:0] == 2'b10) ? 4'b0100 : 4'b1000;

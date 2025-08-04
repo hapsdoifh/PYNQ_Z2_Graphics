@@ -15,7 +15,7 @@
 
 		// Parameters of Axi Master Bus Interface M00_AXI
 		parameter  C_M00_AXI_TARGET_SLAVE_BASE_ADDR	= 32'h40000000,
-		parameter integer C_M00_AXI_BURST_LEN	= 16,
+		parameter integer C_M00_AXI_BURST_LEN	= 1,
 		parameter integer C_M00_AXI_ID_WIDTH	= 1,
 		parameter integer C_M00_AXI_ADDR_WIDTH	= 32,
 		parameter integer C_M00_AXI_DATA_WIDTH	= 32,
@@ -151,7 +151,7 @@
 
 // Instantiation of Axi Bus Interface M00_AXI
 	harry_graphics_ip_core_master_full_v1_0_M00_AXI # ( 
-		.C_M_TARGET_SLAVE_BASE_ADDR(C_M00_AXI_TARGET_SLAVE_BASE_ADDR),
+//		.C_M_TARGET_SLAVE_BASE_ADDR(C_M00_AXI_TARGET_SLAVE_BASE_ADDR),
 		.C_M_AXI_BURST_LEN(C_M00_AXI_BURST_LEN),
 		.C_M_AXI_ID_WIDTH(C_M00_AXI_ID_WIDTH),
 		.C_M_AXI_ADDR_WIDTH(C_M00_AXI_ADDR_WIDTH),
