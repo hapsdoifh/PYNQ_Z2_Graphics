@@ -28,6 +28,7 @@
 		output wire output_read_ack,
 		
 		input wire [31:0] input_data0,		
+		input wire [31:0] input_data1,		
 		// User ports ends
 		// Do not modify the ports beyond this line
 
@@ -226,7 +227,7 @@
 	      slv_reg3 <= 0;
 	      slv_reg4 <= 0;
 	      slv_reg5 <= 0;
-	      slv_reg6 <= 0;
+//	      slv_reg6 <= 0;
 //	      slv_reg7 <= 0;
 	    end 
 	  else begin
@@ -280,7 +281,7 @@
 	              if ( S_AXI_WSTRB[byte_index] == 1 ) begin
 	                // Respective byte enables are asserted as per write strobes 
 	                // Slave register 6
-	                slv_reg6[(byte_index*8) +: 8] <= S_AXI_WDATA[(byte_index*8) +: 8];
+//	                slv_reg6[(byte_index*8) +: 8] <= S_AXI_WDATA[(byte_index*8) +: 8];
 	              end  
 	          3'h7:
 	            for ( byte_index = 0; byte_index <= (C_S_AXI_DATA_WIDTH/8)-1; byte_index = byte_index+1 )
@@ -296,7 +297,7 @@
 	                      slv_reg3 <= slv_reg3;
 	                      slv_reg4 <= slv_reg4;
 	                      slv_reg5 <= slv_reg5;
-	                      slv_reg6 <= slv_reg6;
+//	                      slv_reg6 <= slv_reg6;
 //	                      slv_reg7 <= slv_reg7;
 	                    end
 	        endcase
@@ -388,11 +389,13 @@
 	begin
 	   if(valid_stage2) begin
            out_read_ack <= 1;
-           slv_reg7 <= input_data0;
+//           slv_reg7 <= input_data0;
 	   end else begin
 	       out_read_ack <= 0;  
 	   end
-	   if(slv_reg3[9]) begin
+	   slv_reg6 <= input_data1;
+	   slv_reg7 <= input_data0;
+	   if(slv_reg3[17]) begin
 	       out_wvalid <= 1;
            reg0_write <= slv_reg0;
            reg1_write <= slv_reg1;

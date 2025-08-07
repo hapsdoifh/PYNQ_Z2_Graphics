@@ -247,7 +247,7 @@
 	//The burst counters are used to track the number of burst transfers of C_M_AXI_BURST_LEN burst length needed to transfer 2^C_MASTER_LENGTH bytes of data.
 	reg [C_NO_BURSTS_REQ : 0] 	write_burst_counter;
 	reg [C_NO_BURSTS_REQ : 0] 	read_burst_counter;
-	reg  	writes_done = 1;
+	reg  	writes_done = 0;
 	reg  	reads_done;
 	reg  	error_reg;
 	reg  	compare_done;
@@ -262,6 +262,7 @@
 	reg  	init_txn_ff2;
 	reg  	init_txn_edge;
 	wire  	init_txn_pulse;
+
 
 
 	// I/O Connections assignments
@@ -317,7 +318,8 @@
 	//Burst size in bytes
 	assign burst_size_bytes	= C_M_AXI_BURST_LEN * C_M_AXI_DATA_WIDTH/8;
 	assign init_txn_pulse	= (!init_txn_ff2) && init_txn_ff;
-
+    
+    reg [31:0] axi_transaction_counter = 0;
 	//Generate a pulse to initiate AXI transaction.
 	always @(posedge M_AXI_ACLK)										      
 	  begin                                                                        
@@ -325,7 +327,7 @@
 	    if (M_AXI_ARESETN == 0 )                                                   
 	      begin                                                                    
 	        init_txn_ff <= 1'b0;                                                   
-	        init_txn_ff2 <= 1'b0;                                                   
+	        init_txn_ff2 <= 1'b0;                                             
 	      end                                                                               
 	    else                                                                       
 	      begin  
@@ -341,7 +343,7 @@
 	     if (M_AXI_ARESETN == 0 || init_txn_pulse)                                  
 	       begin                                                                                    
 	        axi_awvalid <= 1'b0;                               
-	        axi_awaddr <= 1'b0;                        
+//	        axi_awaddr <= 1'b0;                        
 	        axi_wvalid <= 1'b0;                        
 	        axi_wlast <= 1'b0;                        
 	        write_index <= 0;                        
@@ -350,7 +352,8 @@
 	        if (init_txn_pulse) state_write <= IDLE;                               
 	       end                                                                                      
 	    else                        
-	      begin                        
+	      begin      
+//	      if(post_fb_addr < 32'h11FA400) axi_awaddr <= (post_fb_addr << 2);	                               
 	        case(state_write)                        
 	          IDLE:                        
 	            begin                        
@@ -388,7 +391,8 @@
 	            begin                         
 	              if (M_AXI_AWREADY && axi_awvalid)                          
 	                begin                    
-                      if(axi_awaddr < 32'h1000)  axi_awaddr <= axi_awaddr + burst_size_bytes;     	                                          
+                      if(axi_awaddr < 32'h10000)  axi_awaddr <= axi_awaddr + burst_size_bytes;    
+                      else axi_awaddr <= 0;                         
 	                  axi_wvalid <= 1;                         
 	                  if (M_AXI_WREADY && axi_wlast && &(write_burst_counter[C_NO_BURSTS_REQ-1:0]))                         
 	                    begin                         
@@ -699,7 +703,8 @@
 	  begin                                                                                                     
 	    if (M_AXI_ARESETN == 1'b0 )                                                                             
 	      begin                                                                                                 
-	        // reset condition                                                                                  
+	        // reset condition                  
+//	        axi_transaction_counter <= 0;                                                                      
 	        // All the signals are assigned default values under reset condition                                
 	        mst_exec_state      <= IDLE;                                                                
 	        compare_done      <= 1'b0;                                                                          
@@ -727,8 +732,9 @@
 	                                                                                                            
 	          INIT_WRITE:                                                                                       
 	            if (writes_done)                                                                                
-	              begin                                                                                         
-	                mst_exec_state <= INIT_READ;//                                                              
+	              begin 
+                   axi_transaction_counter <= axi_transaction_counter + 1;                                                                                       
+	                mst_exec_state <= INIT_COMPARE;//                                                              
 	              end                                                                                           
 	            else                                                                                            
 	              begin                                                                                         
@@ -778,8 +784,9 @@
 	      writes_done <= 1'b0;                                                                                  
 	                                                                                                            
 	    //The writes_done should be associated with a bready response                                           
-	    //else if (M_AXI_BVALID && axi_bready && (write_burst_counter == {(C_NO_BURSTS_REQ-1){1}}) && axi_wlast)
-	    else if (M_AXI_BVALID && (&write_burst_counter[C_NO_BURSTS_REQ-1:0]) && axi_bready)                          
+	    //else if (M_AXI_BVALID && axi_bready && (write_burst_counter == {(C_NO_BURSTS_REQ-1){1}}) && axi_wlast)       
+	    else if (M_AXI_BVALID && (&write_burst_counter[C_NO_BURSTS_REQ-1:0]) && axi_wlast)   
+//	    else if (M_AXI_BVALID && (&write_burst_counter[C_NO_BURSTS_REQ-1:0]) && axi_bready)                    
 	      writes_done <= 1'b1;                                                                                  
 	    else                                                                                                    
 	      writes_done <= writes_done;                                                                           
@@ -807,6 +814,9 @@
 
 	// Add user logic here
 	reg valid_stage1, valid_stage2;
+    
+	wire [31:0] pre_fb_addr;
+	wire [31:0] post_fb_addr; 
 	
 	reg [31:0] reg0_in;
 	reg [31:0] reg1_in;
@@ -817,17 +827,17 @@
 	reg ack_out;
 	reg read_ack_stage1, read_ack_stage2;
 	
-	wire [15:0] pre_fb_addr;
-	wire [31:0] post_fb_addr;
 	reg [3:0] wen_history;
 	wire [31:0] debug_data;
 	reg wvalid_out;
+	reg isPulse = 0;
 	
 	assign output_wvalid = wvalid_out;
 	assign output_ack = ack_out;
-	assign output_data0 = {1'b0, reg3_in[8], reg4_in[5:0],reg3_in[5:0],reg2_in[5:0],reg1_in[5:0],reg0_in[5:0]};
+	assign output_data0 = {axi_transaction_counter[15:0], 14'b0, init_txn_pulse, isPulse};
+	assign output_data1 = axi_awaddr;
 	
-	assign post_fb_addr = (pre_fb_addr[7:0] * 8'd80 + pre_fb_addr[15:8]);
+	assign post_fb_addr = (pre_fb_addr[15:0] * 16'd1920 + pre_fb_addr[31:16]);
 	
 	always @(posedge M_AXI_ACLK) begin
 	   valid_stage1 <= input_wvalid;
@@ -835,6 +845,8 @@
 	   
 	   read_ack_stage1 <= input_ack;
 	   read_ack_stage2 <= read_ack_stage1;
+	   
+	   isPulse = isPulse | init_txn_pulse;
 	end
 	
 	always @(posedge M_AXI_ACLK) begin
@@ -849,7 +861,7 @@
 	       reg1_in <= input_data1;
 	       reg2_in <= input_data2;
 	       reg3_in <= input_data3;
-	       reg4_in <= post_fb_addr;
+	       reg4_in <= input_data4;
 	       ack_out <= 1;
 	   end
 	   else begin
@@ -866,18 +878,17 @@
     wire TXN_INPUT_FAKE;
     Wireframe_drawer drawer_1(
         .clk(M_AXI_ACLK),
-        .x0(reg0_in[7:0]),
-        .y0(reg1_in[7:0]),
-        .x1(reg2_in[7:0]),
-        .y1(reg3_in[7:0]),
-        .start(reg3_in[8]),
+        .x0(reg0_in[15:0]),
+        .y0(reg1_in[15:0]),
+        .x1(reg2_in[15:0]),
+        .y1(reg3_in[15:0]),
+        .start(reg3_in[16]),
         .fb_addr(pre_fb_addr),
         .fb_data(BM_data),
         .w_en(TXN_INPUT_FAKE),
         .debug_info(debug_data),     
         .axi_master_state(state_write),
-        .axi_master_writes_done(writes_done),
-        .axi_master_reads_done(reads_done)
+        .axi_master_writes_done(writes_done)
     );
     
 //	assign BM_wen = (bm_wen == 0) ? 4'b0000 : (post_fb_addr[1:0] == 2'b00) ? 4'b0001 : (post_fb_addr[1:0] == 2'b01) ? 4'b0010 : (post_fb_addr[1:0] == 2'b10) ? 4'b0100 : 4'b1000;

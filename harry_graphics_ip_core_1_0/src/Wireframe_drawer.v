@@ -22,23 +22,23 @@
 
 module Wireframe_drawer(
     input wire clk,
-    input wire [7:0] x0, //256 bit
-    input wire [7:0] y0, //256 bit
-    input wire [7:0] x1, //256 bit
-    input wire [7:0] y1, //256 bit
+    input wire [15:0] x0, //256 bit
+    input wire [15:0] y0, //256 bit
+    input wire [15:0] x1, //256 bit
+    input wire [15:0] y1, //256 bit
     input wire start,
     
-    output wire[15:0] fb_addr,
-    output wire[7:0] fb_data,
+    output wire[31:0] fb_addr,
+    output wire[15:0] fb_data,
     output wire w_en,
     output wire [31:0] debug_info,
     
     input wire [1:0] axi_master_state,
-    input wire axi_master_awready
+    input wire axi_master_writes_done
     );
     
-    function [7:0] abs;
-        input signed [7:0] in_val;
+    function [15:0] abs;
+        input signed [15:0] in_val;
         begin
             abs = (in_val >= 0) ? in_val : in_val * -1;
         end
@@ -54,34 +54,37 @@ module Wireframe_drawer(
     reg [1:0] state = IDLE;
     reg [1:0] draw_state = IDLE;
                 
-    reg signed [7:0] dx;
-    reg signed [7:0] dy;
+    reg signed [15:0] dx;
+    reg signed [15:0] dy;
     
-    reg signed [7:0] delta_x;
-    reg signed [7:0] delta_y;
+    reg signed [15:0] delta_x = 0;
+    reg signed [15:0] delta_y = 0;
     
-    reg signed [7:0] cur_x;
-    reg signed [7:0] cur_y;
+    reg signed [15:0] cur_x = 0;
+    reg signed [15:0] cur_y = 0;
     
-    reg signed [7:0] current;   
+    reg signed [15:0] current;   
     
     reg write_now = 0;
-    reg [31:0] pixel_color = 8'hff;
+    reg [31:0] pixel_color = 32'hffffffff;
     reg start_latch = 0;
     
-    reg [7:0] aliased_x0;
-    reg [7:0] aliased_y0;
-    reg [7:0] aliased_x1;
-    reg [7:0] aliased_y1;
-    reg signed [7:0] aliased_delta_x;
-    reg signed [7:0] aliased_delta_y;
+    reg [15:0] aliased_x0;
+    reg [15:0] aliased_y0;
+    reg [15:0] aliased_x1;
+    reg [15:0] aliased_y1;
+    reg signed [15:0] aliased_delta_x;
+    reg signed [15:0] aliased_delta_y;
+    
+    reg write_latch = 0; 
     
     assign fb_addr = (delta_x > delta_y) ? {cur_x, cur_y} : {cur_y, cur_x};
-    assign fb_data = 8'hff;
+    assign fb_data = 16'hffff;
     assign w_en = write_now;
-    assign debug_info[15:8] = aliased_delta_x;
-    assign debug_info[7:0] = aliased_delta_y;
-    assign debug_info[23:16] = current;
+//    assign debug_info[15:8] = aliased_delta_x;
+//    assign debug_info[15:0] = aliased_delta_y;
+//    assign debug_info[23:16] = current;
+    assign debug_info = 0;
        
     always @(posedge clk) begin
         case(state)
@@ -127,7 +130,8 @@ module Wireframe_drawer(
             RUNNING: begin
                 if(draw_state == IDLE) begin
                     if(axi_master_state == IDLE) draw_state <= INIT;
-                    else draw_state <= IDLE;
+                    else draw_state <= IDLE;                
+                    write_latch <= 0;
                 end
                 else if(draw_state == INIT) begin
                     if(current >= 0) begin
@@ -154,7 +158,8 @@ module Wireframe_drawer(
                     end
                 end 
                 else begin
-                    if(axi_master_awready) begin
+                    write_latch <= write_latch || axi_master_writes_done;
+                    if(write_latch) begin
                         if(cur_x == aliased_x1)  begin
                             state <= IDLE;
                         end

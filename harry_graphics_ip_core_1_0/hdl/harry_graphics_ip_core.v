@@ -143,6 +143,7 @@
 		.output_reg4(reg4_data),
 		
 		.input_data0(m_issued_data0),
+		.input_data1(m_issued_data1),
 		
 		.output_wvalid(s_issued_wvalid),
 		.input_wvalid(m_issued_wvalid),
@@ -221,12 +222,13 @@
         .output_wvalid(m_issued_wvalid), 
         .output_ack(read_acknowledge),
 		
-		.output_data0(m_issued_data0)
+		.output_data0(m_issued_data0),
+		.output_data1(m_issued_data1)
 	);
 
 	// Add user logic here
     wire [31:0] reg0_data, reg1_data, reg2_data, reg3_data, reg4_data;
-    wire [31:0] m_issued_data0;
+    wire [31:0] m_issued_data0,m_issued_1;
     wire read_acknowledge, m_issued_wvalid, s_issued_wvalid;
 	// User logic ends
 
