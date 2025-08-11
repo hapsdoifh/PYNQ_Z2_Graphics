@@ -11,7 +11,7 @@
 		// Base address of targeted slave
 		parameter  C_M_TARGET_SLAVE_BASE_ADDR	= 32'h10000000,
 		// Burst Length. Supports 1, 2, 4, 8, 16, 32, 64, 128, 256 burst lengths
-		parameter integer C_M_AXI_BURST_LEN	= 16,
+		parameter integer C_M_AXI_BURST_LEN	= 8,
 		// Thread ID Width
 		parameter integer C_M_AXI_ID_WIDTH	= 1,
 		// Width of Address Bus
@@ -192,7 +192,7 @@
 
 	// Burst length for transactions, in C_M_AXI_DATA_WIDTHs.
 	// Non-2^n lengths will eventually cause bursts across 4K address boundaries.
-	 localparam integer C_MASTER_LENGTH	= 7;
+	 localparam integer C_MASTER_LENGTH	= 6;
 	// total number of burst transfers is master length divided by burst length and burst size
 	 localparam integer C_NO_BURSTS_REQ = C_MASTER_LENGTH-clogb2((C_M_AXI_BURST_LEN*C_M_AXI_DATA_WIDTH/8)-1);
 	// Example State machine to initialize counter, initialize write transactions, 
@@ -352,8 +352,7 @@
 	        if (init_txn_pulse) state_write <= IDLE;                               
 	       end                                                                                      
 	    else                        
-	      begin      
-//	      if(post_fb_addr < 32'h11FA400) axi_awaddr <= (post_fb_addr << 2);	                               
+	      begin                                 
 	        case(state_write)                        
 	          IDLE:                        
 	            begin                        
@@ -391,8 +390,9 @@
 	            begin                         
 	              if (M_AXI_AWREADY && axi_awvalid)                          
 	                begin                    
-                      if(axi_awaddr < 32'h10000)  axi_awaddr <= axi_awaddr + burst_size_bytes;    
-                      else axi_awaddr <= 0;                         
+//                      if(axi_awaddr < 32'h10000)  axi_awaddr <= axi_awaddr + burst_size_bytes;    
+//	                  if(post_fb_addr < 32'h11FA400) axi_awaddr <= (post_fb_addr << 4);	    
+//                      else axi_awaddr <= axi_awaddr;                         
 	                  axi_wvalid <= 1;                         
 	                  if (M_AXI_WREADY && axi_wlast && &(write_burst_counter[C_NO_BURSTS_REQ-1:0]))                         
 	                    begin                         
@@ -732,9 +732,9 @@
 	                                                                                                            
 	          INIT_WRITE:                                                                                       
 	            if (writes_done)                                                                                
-	              begin 
-                   axi_transaction_counter <= axi_transaction_counter + 1;                                                                                       
-	                mst_exec_state <= INIT_COMPARE;//                                                              
+	              begin                                                                             
+	                mst_exec_state <= INIT_COMPARE;//     
+                    axi_transaction_counter <= axi_transaction_counter + 1;                                                                
 	              end                                                                                           
 	            else                                                                                            
 	              begin                                                                                         
@@ -785,7 +785,7 @@
 	                                                                                                            
 	    //The writes_done should be associated with a bready response                                           
 	    //else if (M_AXI_BVALID && axi_bready && (write_burst_counter == {(C_NO_BURSTS_REQ-1){1}}) && axi_wlast)       
-	    else if (M_AXI_BVALID && (&write_burst_counter[C_NO_BURSTS_REQ-1:0]) && axi_wlast)   
+	    else if (M_AXI_BVALID && (&write_burst_counter[C_NO_BURSTS_REQ-1:0]))   
 //	    else if (M_AXI_BVALID && (&write_burst_counter[C_NO_BURSTS_REQ-1:0]) && axi_bready)                    
 	      writes_done <= 1'b1;                                                                                  
 	    else                                                                                                    
@@ -830,14 +830,14 @@
 	reg [3:0] wen_history;
 	wire [31:0] debug_data;
 	reg wvalid_out;
-	reg isPulse = 0;
+	reg [15:0] isPulse = 0;
 	
 	assign output_wvalid = wvalid_out;
 	assign output_ack = ack_out;
-	assign output_data0 = {axi_transaction_counter[15:0], 14'b0, init_txn_pulse, isPulse};
+	assign output_data0 = {15'b0, isPulse, axi_transaction_counter[15:0]};
 	assign output_data1 = axi_awaddr;
 	
-	assign post_fb_addr = (pre_fb_addr[15:0] * 16'd1920 + pre_fb_addr[31:16]);
+	assign post_fb_addr = (pre_fb_addr[15:0] * 1920 + pre_fb_addr[31:16]);
 	
 	always @(posedge M_AXI_ACLK) begin
 	   valid_stage1 <= input_wvalid;
@@ -846,7 +846,10 @@
 	   read_ack_stage1 <= input_ack;
 	   read_ack_stage2 <= read_ack_stage1;
 	   
-	   isPulse = isPulse | init_txn_pulse;
+	   isPulse <= isPulse + init_txn_pulse;
+      if(post_fb_addr < 32'h3F48000) axi_awaddr <= (post_fb_addr * 24);	    
+      else axi_awaddr <= axi_awaddr;  
+          
 	end
 	
 	always @(posedge M_AXI_ACLK) begin
