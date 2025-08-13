@@ -11,7 +11,7 @@
 		// Base address of targeted slave
 		parameter  C_M_TARGET_SLAVE_BASE_ADDR	= 32'h10000000,
 		// Burst Length. Supports 1, 2, 4, 8, 16, 32, 64, 128, 256 burst lengths
-		parameter integer C_M_AXI_BURST_LEN	= 8,
+		parameter integer C_M_AXI_BURST_LEN	= 2,
 		// Thread ID Width
 		parameter integer C_M_AXI_ID_WIDTH	= 1,
 		// Width of Address Bus
@@ -392,7 +392,9 @@
 	                begin                    
 //                      if(axi_awaddr < 32'h10000)  axi_awaddr <= axi_awaddr + burst_size_bytes;    
 //	                  if(post_fb_addr < 32'h11FA400) axi_awaddr <= (post_fb_addr << 4);	    
-//                      else axi_awaddr <= axi_awaddr;                         
+//                      else axi_awaddr <= axi_awaddr;          
+                      if(post_fb_addr < 32'h3F48000) axi_awaddr <= {post_fb_addr[31:3], 3'b0};	    
+                      else axi_awaddr <= axi_awaddr;                 
 	                  axi_wvalid <= 1;                         
 	                  if (M_AXI_WREADY && axi_wlast && &(write_burst_counter[C_NO_BURSTS_REQ-1:0]))                         
 	                    begin                         
@@ -837,7 +839,7 @@
 	assign output_data0 = {15'b0, isPulse, axi_transaction_counter[15:0]};
 	assign output_data1 = axi_awaddr;
 	
-	assign post_fb_addr = (pre_fb_addr[15:0] * 1920 + pre_fb_addr[31:16]);
+	assign post_fb_addr = ((pre_fb_addr[15:0] * 1920) + pre_fb_addr[31:16]) * 3;
 	
 	always @(posedge M_AXI_ACLK) begin
 	   valid_stage1 <= input_wvalid;
@@ -847,8 +849,6 @@
 	   read_ack_stage2 <= read_ack_stage1;
 	   
 	   isPulse <= isPulse + init_txn_pulse;
-      if(post_fb_addr < 32'h3F48000) axi_awaddr <= (post_fb_addr * 24);	    
-      else axi_awaddr <= axi_awaddr;  
           
 	end
 	

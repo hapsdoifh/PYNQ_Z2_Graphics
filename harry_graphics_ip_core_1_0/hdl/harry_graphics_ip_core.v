@@ -228,7 +228,7 @@
 
 	// Add user logic here
     wire [31:0] reg0_data, reg1_data, reg2_data, reg3_data, reg4_data;
-    wire [31:0] m_issued_data0,m_issued_1;
+    wire [31:0] m_issued_data0,m_issued_data1;
     wire read_acknowledge, m_issued_wvalid, s_issued_wvalid;
 	// User logic ends
 

@@ -44,7 +44,7 @@ module Wireframe_drawer(
         end
     endfunction
     
-    reg [2:1] ticks_to_hold = 0;
+    reg [15:0] ticks_to_hold = 0;
     
     localparam  IDLE = 2'b00,
                 INIT = 2'b01,
@@ -77,7 +77,7 @@ module Wireframe_drawer(
     reg signed [15:0] aliased_delta_y;
     
     reg write_latch = 0; 
-    
+    reg [15:0] sleep_timer = 0;
     assign fb_addr = (delta_x > delta_y) ? {cur_x, cur_y} : {cur_y, cur_x};
     assign fb_data = 16'hffff;
     assign w_en = write_now;
@@ -85,6 +85,9 @@ module Wireframe_drawer(
 //    assign debug_info[15:0] = aliased_delta_y;
 //    assign debug_info[23:16] = current;
     assign debug_info = 0;
+    
+    wire [15:0] sleep_condition;
+    assign sleep_condition = (cur_x - aliased_x0) & 15'h3f;
        
     always @(posedge clk) begin
         case(state)
@@ -125,11 +128,16 @@ module Wireframe_drawer(
                 state <= RUNNING;
                 draw_state <= IDLE;
                 ticks_to_hold <= 0;
+                sleep_timer <= 0;
             end
             
             RUNNING: begin
                 if(draw_state == IDLE) begin
-                    if(axi_master_state == IDLE) draw_state <= INIT;
+                    if((sleep_condition == 'h3f) && sleep_timer < 4096) begin
+                        draw_state <= IDLE;
+                        sleep_timer <= sleep_timer + 1;
+                    end
+                    else if(axi_master_state == IDLE) draw_state <= INIT;
                     else draw_state <= IDLE;                
                     write_latch <= 0;
                 end
@@ -148,7 +156,7 @@ module Wireframe_drawer(
                     ticks_to_hold <= 0;
                 end
                 else if(draw_state == RUNNING) begin
-                    if(ticks_to_hold < 3) begin
+                    if(ticks_to_hold < 4096) begin
                         draw_state <= RUNNING;
                         ticks_to_hold <= ticks_to_hold + 1;
                     end
@@ -167,6 +175,7 @@ module Wireframe_drawer(
                             state <= RUNNING;
                         end
                         draw_state <= IDLE;
+                        sleep_timer <= 0;
                     end
                     else draw_state <= FINISHED;
                 end

@@ -393,8 +393,8 @@
 	   end else begin
 	       out_read_ack <= 0;  
 	   end
-	   slv_reg6 <= input_data1;
-	   slv_reg7 <= input_data0;
+	   slv_reg6 <= input_data0;
+	   slv_reg7 <= input_data1;
 	   if(slv_reg3[17]) begin
 	       out_wvalid <= 1;
            reg0_write <= slv_reg0;
