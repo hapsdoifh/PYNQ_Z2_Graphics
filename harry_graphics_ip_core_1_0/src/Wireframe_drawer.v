@@ -29,12 +29,13 @@ module Wireframe_drawer(
     input wire start,
     
     output wire[31:0] fb_addr,
-    output wire[15:0] fb_data,
+    output wire[31:0] fb_data,
     output wire w_en,
     output wire [31:0] debug_info,
     
     input wire [1:0] axi_master_state,
-    input wire axi_master_writes_done
+    input wire axi_master_writes_done,
+    input wire axi_master_burst_done
     );
     
     function [15:0] abs;
@@ -66,7 +67,7 @@ module Wireframe_drawer(
     reg signed [15:0] current;   
     
     reg write_now = 0;
-    reg [31:0] pixel_color = 32'hffffffff;
+    reg [31:0] pixel_color = 32'h0;
     reg start_latch = 0;
     
     reg [15:0] aliased_x0;
@@ -79,7 +80,7 @@ module Wireframe_drawer(
     reg write_latch = 0; 
     reg [15:0] sleep_timer = 0;
     assign fb_addr = (delta_x > delta_y) ? {cur_x, cur_y} : {cur_y, cur_x};
-    assign fb_data = 16'hffff;
+    assign fb_data = pixel_color;
     assign w_en = write_now;
 //    assign debug_info[15:8] = aliased_delta_x;
 //    assign debug_info[15:0] = aliased_delta_y;
@@ -113,13 +114,10 @@ module Wireframe_drawer(
                 end
                 delta_x <= abs($signed(x1) - $signed(x0));
                 delta_y <= abs($signed(y1) - $signed(y0));
+                pixel_color <= 0;
             end
             
             INIT: begin
-//                cur_x <= x0;
-//                cur_y <= y0;
-//                dx <= (x0 < x1) ? 1 : -1;
-//                dy <= (y0 < y1) ? 1 : -1;
                 cur_x <= aliased_x0;
                 cur_y <= aliased_y0;
                 dx <= (aliased_x0 < aliased_x1) ? 1 : -1;
@@ -133,15 +131,16 @@ module Wireframe_drawer(
             
             RUNNING: begin
                 if(draw_state == IDLE) begin
-                    if((sleep_condition == 'h3f) && sleep_timer < 4096) begin
-                        draw_state <= IDLE;
-                        sleep_timer <= sleep_timer + 1;
-                    end
-                    else if(axi_master_state == IDLE) draw_state <= INIT;
-                    else draw_state <= IDLE;                
-                    write_latch <= 0;
+                    if(axi_master_state == IDLE) draw_state <= INIT;
+                    else draw_state <= IDLE;  
                 end
-                else if(draw_state == INIT) begin
+                else if(draw_state == INIT) begin              
+                    write_latch <= 0;
+                    ticks_to_hold <= 0;
+                    draw_state <= RUNNING;
+                end
+                else if(draw_state == RUNNING) begin
+                    write_latch <= write_latch || axi_master_writes_done;
                     if(current >= 0) begin
                         cur_y <= cur_y + dy;
                         current <= current - aliased_delta_x + aliased_delta_y;
@@ -151,33 +150,29 @@ module Wireframe_drawer(
                         current <= current + aliased_delta_y;
                     end
                     cur_x <= cur_x + dx;
-                    draw_state <= RUNNING;
                     write_now <= 1;
-                    ticks_to_hold <= 0;
-                end
-                else if(draw_state == RUNNING) begin
+                    pixel_color <= 32'hffffff;
+                    draw_state <= FINISHED;
+                end 
+                else begin
+                    write_latch <= write_latch || axi_master_writes_done;
                     if(ticks_to_hold < 4096) begin
-                        draw_state <= RUNNING;
+                        draw_state <= FINISHED;
                         ticks_to_hold <= ticks_to_hold + 1;
                     end
                     else begin
                         write_now <= 0;
-                        draw_state <= FINISHED;
-                    end
-                end 
-                else begin
-                    write_latch <= write_latch || axi_master_writes_done;
-                    if(write_latch) begin
-                        if(cur_x == aliased_x1)  begin
-                            state <= IDLE;
+                        if(write_latch) begin
+                            if(cur_x == aliased_x1)  begin
+                                state <= IDLE;
+                            end
+                            else begin
+                                state <= RUNNING;
+                            end
+                            draw_state <= IDLE;
                         end
-                        else begin
-                            state <= RUNNING;
-                        end
-                        draw_state <= IDLE;
-                        sleep_timer <= 0;
+                        else draw_state <= FINISHED;
                     end
-                    else draw_state <= FINISHED;
                 end
                 
              end

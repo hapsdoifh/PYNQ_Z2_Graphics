@@ -11,7 +11,7 @@
 		// Base address of targeted slave
 		parameter  C_M_TARGET_SLAVE_BASE_ADDR	= 32'h10000000,
 		// Burst Length. Supports 1, 2, 4, 8, 16, 32, 64, 128, 256 burst lengths
-		parameter integer C_M_AXI_BURST_LEN	= 2,
+		parameter integer C_M_AXI_BURST_LEN	= 16,
 		// Thread ID Width
 		parameter integer C_M_AXI_ID_WIDTH	= 1,
 		// Width of Address Bus
@@ -192,7 +192,7 @@
 
 	// Burst length for transactions, in C_M_AXI_DATA_WIDTHs.
 	// Non-2^n lengths will eventually cause bursts across 4K address boundaries.
-	 localparam integer C_MASTER_LENGTH	= 6;
+	 localparam integer C_MASTER_LENGTH	= 7;
 	// total number of burst transfers is master length divided by burst length and burst size
 	 localparam integer C_NO_BURSTS_REQ = C_MASTER_LENGTH-clogb2((C_M_AXI_BURST_LEN*C_M_AXI_DATA_WIDTH/8)-1);
 	// Example State machine to initialize counter, initialize write transactions, 
@@ -287,7 +287,6 @@
 	assign M_AXI_AWVALID	= axi_awvalid;
 	//Write Data(W)
 //	assign M_AXI_WDATA	= axi_wdata;
-   	assign M_AXI_WDATA	= 32'hffffffff;
 	//All bursts are complete and aligned in this example
 	assign M_AXI_WSTRB	= {(C_M_AXI_DATA_WIDTH/8){1'b1}};
 	assign M_AXI_WLAST	= axi_wlast;
@@ -320,6 +319,11 @@
 	assign init_txn_pulse	= (!init_txn_ff2) && init_txn_ff;
     
     reg [31:0] axi_transaction_counter = 0;
+	wire burst_complete;
+	assign burst_complete = &(write_burst_counter[C_NO_BURSTS_REQ-1:0]);
+	wire [31:0] pre_fb_data ;
+	reg [31:0] post_fb_data = 0;
+   	assign M_AXI_WDATA	= post_fb_data;
 	//Generate a pulse to initiate AXI transaction.
 	always @(posedge M_AXI_ACLK)										      
 	  begin                                                                        
@@ -478,7 +482,7 @@
 	                  axi_wlast <= 1'b0;                        
 	                  write_index <= 0;                        
 	                  axi_wdata <= 1;                        
-	                  axi_bready <= 1'b1;                        
+	                  axi_bready <= 1'b1;                   
 	                end                          
 	              else if (M_AXI_WREADY && axi_wlast)                        
 	                begin                        
@@ -486,13 +490,17 @@
 	                  axi_awvalid <= 1;                        
 	                  write_index <= 0;                        
 	                  axi_bready <= 1;                        
-	                  axi_wdata <= axi_wdata + 1;                        
+	                  axi_wdata <= axi_wdata + 1;    
+					  if(write_index == 0) post_fb_data <= pre_fb_data;
+				 	  else post_fb_data <= 0;                             
 	                  axi_wlast <= 0;                        
 	                  state_write <= WADDR;                        
 	                end                        
 	              else if (M_AXI_WREADY)                         
 	                begin                        
-	                  axi_wdata <= axi_wdata + 1;                        
+	                  axi_wdata <= axi_wdata + 1;    
+					  if(write_index == 0) post_fb_data <= pre_fb_data;
+				 	  else post_fb_data <= 0;                         
 	                  if (write_index != C_M_AXI_BURST_LEN-1)  write_index <= write_index + 1;                        
 	                  if (write_index == C_M_AXI_BURST_LEN-2) axi_wlast <= 1;                        
 	                end                           
@@ -887,11 +895,12 @@
         .y1(reg3_in[15:0]),
         .start(reg3_in[16]),
         .fb_addr(pre_fb_addr),
-        .fb_data(BM_data),
+        .fb_data(pre_fb_data),
         .w_en(TXN_INPUT_FAKE),
         .debug_info(debug_data),     
         .axi_master_state(state_write),
-        .axi_master_writes_done(writes_done)
+        .axi_master_writes_done(writes_done),
+		.axi_master_burst_done(burst_complete)
     );
     
 //	assign BM_wen = (bm_wen == 0) ? 4'b0000 : (post_fb_addr[1:0] == 2'b00) ? 4'b0001 : (post_fb_addr[1:0] == 2'b01) ? 4'b0010 : (post_fb_addr[1:0] == 2'b10) ? 4'b0100 : 4'b1000;
