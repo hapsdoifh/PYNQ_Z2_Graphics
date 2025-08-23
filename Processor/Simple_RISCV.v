@@ -18,9 +18,20 @@ endmodule
 
 
 module instruction_fetch(
+	input wire clk,
 	input wire [31:0] read_address,
-	output wire [31:0] instruction
+	output reg [31:0] instruction
 );
+
+	(* ramstyle = "M9K" *) reg [31:0] mem [1024:0];
+	initial begin
+		$readmemh("instructions.hex", mem);
+	end
+	
+	//log2(1024) = 10
+	wire [9:0] read_addr = read_address[11:2];
+
+	always @(posedge clk) instruction <= mem[read_addr];
 endmodule
 
 
