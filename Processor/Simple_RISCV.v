@@ -2,18 +2,39 @@ module Simple_RISCV(
 	input wire clk,
 	input wire rst
 );
+	wire [31:0] instruction;
+	wire [31:0] read_data_1;
+	wire [31:0] read_data_2;
+
+	instruction_fetch IF_inst(
+		.clk(clk), 
+		.read_address(32'b0), 
+		.instruction(instruction)
+	);
+
+	control_unit CU_inst(
+		.in_reg_1(instruction[19:15]), 
+		.in_reg_2(instruction[24:20]), 
+		.in_write_reg(instruction[11:7]), 
+		.in_write_data(instruction), 
+		.out_data_1(read_data_1), 
+		.out_data_2(read_data_2)
+	);
 
 endmodule
 
 module control_unit(
-	input wire [4:0] in_reg_1,
-	input wire [4:0] in_reg_2,
-	input wire [4:0] in_wire_reg,
-	input wire [31:0] in_write_data,
-	output wire [31:0] out_data_1,
-	output wire [31:0] out_data_2
+	input wire clk,
+	input wire [3:0] in_instruction
+	output reg reg_write,
+	output reg mem_read,
+	output reg mem_write,
+	output reg branch,
+	output reg [3:0] alu_op,
 );
-
+	always @(posedge clk) begin
+		//control logic to be implemented
+	end
 endmodule
 
 
@@ -43,6 +64,7 @@ module register_file(
 	output wire [31:0] out_read_data_1,
 	output wire [31:0] out_read_data_2	
 );
+
 endmodule 
 
 
