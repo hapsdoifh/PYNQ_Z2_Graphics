@@ -32,8 +32,25 @@ module control_unit(
 	output reg branch,
 	output reg [3:0] alu_op,
 );
+	localparam  = R_TYPE = 7'b0110011,
+				I_TYPE_1 = 7'b0000011,
+				I_TYPE_2 = 7'b0010011,
+				S_TYPE = 7'b0100011,
+				B_TYPE = 7'b1100111,
+				U_TYPE = 7'b0110111,
+				J_TYPE = 7'b1101111;
+	wire [6:0] opcode = in_instruction[6:0];
 	always @(posedge clk) begin
-		//control logic to be implemented
+		case(opcode)
+			R_TYPE:
+			I_TYPE_1,
+			I_TYPE_2:
+			S_TYPE:
+			B_TYPE:	
+			U_TYPE:
+			J_TYPE:
+			default:
+		endcase
 	end
 endmodule
 
