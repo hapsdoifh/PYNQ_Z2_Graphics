@@ -45,6 +45,9 @@ module control_unit(
 			R_TYPE:
 			I_TYPE_1,
 			I_TYPE_2:
+			begin
+				reg_write <= 1'b1;
+			end
 			S_TYPE:
 			B_TYPE:	
 			U_TYPE:

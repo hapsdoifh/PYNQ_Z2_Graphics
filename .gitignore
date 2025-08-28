@@ -1,0 +1,8 @@
+Processor/db
+Processor/incremental_db
+Processor/output_files
+Processor/simulation
+*.qpf
+*.qsf
+*.qws
+*.bak
