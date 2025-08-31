@@ -37,7 +37,6 @@ module control_unit(
 				I_TYPE_1 = 7'b0010011,
 				I_TYPE_2 = 7'b0000011,
 				S_TYPE = 7'b0100011,
-				B_TYPE = 7'b1100111,
 				U_TYPE = 7'b0110111,
 				J_TYPE = 7'b1101111,
 				JALR = 7'b1100111;
@@ -110,11 +109,41 @@ module control_unit(
 						3'b010: mem_info <= 3'b010; // 2 -> load word
 						3'b100: mem_info <= 3'b100; // 4 -> load unsigned byte
 						3'b101: mem_info <= 3'b101; // 5 -> load unsigned halfword
-						default: mem_info <= 3'b101; // NOP or undefined
+						default: mem_info <= 3'b111; // NOP or undefined
 					endcase
 				end
 			S_TYPE:
+				begin
+					reg_write <= 1'b0;
+					mem_read <= 1'b0;
+					mem_write <= 1'b1;
+					branch <= 1'b0;
+					alu_ctrl <= 4'b0010; // add
+					case(func3)
+						3'b000: mem_info <= 3'b000; // 0 -> store byte
+						3'b001: mem_info <= 3'b001; // 1 -> store halfword
+						3'b010: mem_info <= 3'b010; // 2 -> store word
+						default: mem_info <= 3'b111; // NOP or undefined
+					endcase
+				end
 			B_TYPE:	
+				begin
+					reg_write <= 1'b0;
+					mem_read <= 1'b0;
+					mem_write <= 1'b0;
+					branch <= 1'b0;
+					alu_ctrl <= 4'b0110; // sub
+					//TODO: implment branch types other than beq
+					case(func3)
+						3'b000: ;// 0 -> b equal
+						3'b001: ;// 1 -> b not equal
+						3'b100: ;// 4 -> b less than
+						3'b101: ;// 5 -> b greater than or equal
+						3'b110: ;// 6 -> b less than unsigned
+						3'b111: ;// 7 -> b greater than or equal unsigned
+						default: ;// NOP or undefined
+					endcase
+				end
 			U_TYPE:
 			J_TYPE:
 			JALR:
